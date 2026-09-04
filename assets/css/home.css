@@ -260,21 +260,6 @@
   box-shadow: var(--shadow-lg);
 }
 
-.area-card[data-area="ehealth"] {
-  --area-color: var(--area-ehealth);
-  --area-soft: var(--area-ehealth-soft);
-}
-
-.area-card[data-area="ml"] {
-  --area-color: var(--area-ml);
-  --area-soft: var(--area-ml-soft);
-}
-
-.area-card[data-area="cv"] {
-  --area-color: var(--area-cv);
-  --area-soft: var(--area-cv-soft);
-}
-
 .area-icon {
   display: inline-flex;
   align-items: center;

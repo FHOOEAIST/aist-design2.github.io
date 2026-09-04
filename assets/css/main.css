@@ -287,14 +287,6 @@ td {
   color: var(--color-primary-500);
 }
 
-.eyebrow::before {
-  content: "";
-  width: 1.5rem;
-  height: 2px;
-  border-radius: 2px;
-  background: currentColor;
-}
-
 .text-center {
   text-align: center;
 }
