@@ -2083,6 +2083,10 @@ html:not(.js) .listing-toggle-icon {
     transition: opacity 0.2s var(--ease), transform 0.2s var(--ease), visibility 0.2s;
   }
 
+  .site-header:not(.nav-open) .site-nav {
+    pointer-events: none;
+  }
+
   .site-header.nav-open .site-nav {
     opacity: 1;
     visibility: visible;
@@ -2112,8 +2116,14 @@ html:not(.js) .listing-toggle-icon {
     display: none;
   }
 
-  /* submenus are always expanded on small screens */
-  .nav-dropdown-menu {
+  /* Submenus are always expanded on small screens. `visibility: inherit`
+     (not `visible`) so they follow the closed .site-nav — an explicit
+     `visible` on a child overrides the hidden parent and leaves the links
+     clickable while invisible. The hover/focus selectors are repeated so
+     the desktop dropdown rule can't reapply `visible` on a touch tap. */
+  .nav-dropdown-menu,
+  .nav-dropdown:hover .nav-dropdown-menu,
+  .nav-dropdown:focus-within .nav-dropdown-menu {
     position: static;
     min-width: 0;
     margin: 0 0 0.35rem 0.75rem;
@@ -2124,8 +2134,9 @@ html:not(.js) .listing-toggle-icon {
     border-radius: 0;
     box-shadow: none;
     opacity: 1;
-    visibility: visible;
+    visibility: inherit;
     transform: none;
+    transition: none;
   }
 
   .nav-dropdown-menu a {
