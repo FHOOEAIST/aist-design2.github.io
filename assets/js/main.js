@@ -1,4 +1,4 @@
-/* AIST site behaviour: header, collapsible listings, galleries, project filter. */
+/* AIST site behaviour: header, collapsible listings, galleries, folded grids, project filter. */
 (function () {
   "use strict";
 
@@ -262,6 +262,8 @@
         var empty = group.querySelector("[data-empty]");
         if (empty) empty.hidden = visible > 0;
       });
+
+      refreshGridFolds();
     }
 
     buttons.forEach(function (b) {
@@ -280,6 +282,135 @@
       ? match[1]
       : "all";
     apply(initial);
+  }
+
+  /* ---------------------------------------------------------- grid fold */
+  // Collapses a grid (the completed-projects tiles) to its first N rows plus
+  // a fading row underneath; a chevron button toggles the rest. Rows are
+  // measured from the tiles' offsets because the grid is auto-fill, so the
+  // measurement is redone on resize, on image load and after the area filter
+  // has hidden or shown tiles (refreshGridFolds, called from the filter).
+  var gridFolds = [];
+
+  function refreshGridFolds() {
+    gridFolds.forEach(function (fold) { fold.measure(); });
+  }
+
+  function initGridFolds() {
+    var wraps = Array.prototype.slice.call(document.querySelectorAll("[data-grid-fold]"));
+    wraps.forEach(function (wrap) {
+      var toggle = wrap.parentNode.querySelector("[data-grid-fold-toggle]");
+      var grid = wrap.querySelector(".project-grid");
+      if (!toggle || !grid) return;
+
+      var keepRows = parseInt(wrap.getAttribute("data-fold-rows"), 10) || 2;
+      var expanded = false;
+      var foldable = false;
+      var animTimer = null;
+
+      function visibleTiles() {
+        return Array.prototype.slice.call(grid.children).filter(function (el) {
+          return !el.hidden;
+        });
+      }
+
+      // Groups the visible tiles into rows by their top offset (relative to
+      // the wrapper, which is the offset parent).
+      function measureRows() {
+        var rows = [];
+        visibleTiles().forEach(function (tile) {
+          var top = tile.offsetTop;
+          var row = rows.length ? rows[rows.length - 1] : null;
+          if (!row || Math.abs(row.top - top) > 2) {
+            row = { top: top, bottom: top + tile.offsetHeight, tiles: [] };
+            rows.push(row);
+          } else {
+            row.bottom = Math.max(row.bottom, top + tile.offsetHeight);
+          }
+          row.tiles.push(tile);
+        });
+        return rows;
+      }
+
+      // Tiles below the fade row are unreachable while folded, so keep them
+      // out of the tab order and the accessibility tree.
+      function setReachable(rows) {
+        Array.prototype.slice.call(grid.children).forEach(function (tile) {
+          if (!tile.hidden) return;
+          var link = tile.querySelector("a");
+          if (link) link.removeAttribute("tabindex");
+          tile.removeAttribute("aria-hidden");
+        });
+        rows.forEach(function (row, i) {
+          var reachable = expanded || !foldable || i <= keepRows;
+          row.tiles.forEach(function (tile) {
+            var link = tile.querySelector("a");
+            if (link) {
+              if (reachable) link.removeAttribute("tabindex");
+              else link.setAttribute("tabindex", "-1");
+            }
+            if (reachable) tile.removeAttribute("aria-hidden");
+            else tile.setAttribute("aria-hidden", "true");
+          });
+        });
+      }
+
+      function render() {
+        var label = toggle.getAttribute(expanded ? "data-label-less" : "data-label-more");
+        toggle.hidden = !foldable;
+        toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+        if (label) {
+          toggle.setAttribute("aria-label", label);
+          toggle.setAttribute("title", label);
+        }
+        wrap.classList.toggle("is-folded", foldable && !expanded);
+      }
+
+      function measure() {
+        var rows = measureRows();
+        // Fold only when there is more than the kept rows plus the fade row.
+        foldable = rows.length > keepRows + 1;
+        if (foldable) {
+          var fadeRow = rows[keepRows];
+          var lastKept = rows[keepRows - 1];
+          wrap.style.setProperty("--fold-h", fadeRow.bottom + "px");
+          wrap.style.setProperty("--fold-fade", (fadeRow.bottom - lastKept.bottom) + "px");
+        } else {
+          expanded = false;
+          wrap.style.removeProperty("--fold-h");
+          wrap.style.removeProperty("--fold-fade");
+        }
+        wrap.style.setProperty("--fold-full", grid.offsetHeight + "px");
+        setReachable(rows);
+        render();
+      }
+
+      toggle.addEventListener("click", function () {
+        expanded = !expanded;
+        wrap.classList.add("is-animating");
+        clearTimeout(animTimer);
+        animTimer = setTimeout(function () {
+          wrap.classList.remove("is-animating");
+        }, 500);
+        measure();
+        // Collapsing can pull the grid far up the page; keep it in view.
+        if (!expanded && wrap.getBoundingClientRect().top < 0) {
+          wrap.parentNode.scrollIntoView({ block: "start" });
+        }
+      });
+
+      var resizeTimer = null;
+      window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(measure, 120);
+      });
+      Array.prototype.slice.call(grid.querySelectorAll("img")).forEach(function (img) {
+        if (!img.complete) img.addEventListener("load", measure, { once: true });
+      });
+
+      gridFolds.push({ measure: measure });
+      measure();
+    });
   }
 
   /* ------------------------------------------------------------ listbox */
@@ -619,6 +750,7 @@
     initHeader();
     initCollapsibles();
     initGalleries();
+    initGridFolds();
     initProjectFilter();
     initListingFilter();
     initHeroWaves();

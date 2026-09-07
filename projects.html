@@ -69,12 +69,15 @@ first phase's end date. {% endcomment %}
         <p>{{ done_projects.size }} abgeschlossene Projekte (seit 2015)</p>
       </div>
     </div>
-    <ul class="project-grid complete">
+    <div class="grid-fold" data-grid-fold data-fold-rows="2">
+    <ul class="project-grid complete" id="completed-projects">
     {% for project in done_projects %}
       {% assign is_active = false %}
       {% include project-card.html %}
     {% endfor %}
     </ul>
+    </div>
+    <button type="button" class="grid-fold-toggle" data-grid-fold-toggle aria-expanded="false" aria-controls="completed-projects" aria-label="Alle abgeschlossenen Projekte anzeigen" title="Alle abgeschlossenen Projekte anzeigen" data-label-more="Alle abgeschlossenen Projekte anzeigen" data-label-less="Weniger abgeschlossene Projekte anzeigen" hidden><i class="fas fa-chevron-down" aria-hidden="true"></i></button>
     <p class="project-group-empty" data-empty hidden>Keine abgeschlossenen Projekte in diesem Bereich.</p>
   </section>
 </div>
