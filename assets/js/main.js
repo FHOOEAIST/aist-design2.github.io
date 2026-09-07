@@ -1,4 +1,4 @@
-/* AIST site behaviour: header, collapsible listings, year groups, galleries, folded grids, project filter. */
+/* AIST site behaviour: header, folds, collapsible listings, galleries, project filter. */
 (function () {
   "use strict";
 
@@ -59,10 +59,7 @@
     if (item.classList.contains("collapsible")) {
       setListingExpanded(item, true);
     }
-    var group = item.closest(".year-group");
-    if (group && group.previousElementSibling && group.previousElementSibling.classList.contains("year-heading")) {
-      setYearExpanded(group.previousElementSibling, true);
-    }
+    unfoldAround(item);
   }
 
   function initCollapsibles() {
@@ -76,6 +73,7 @@
 
       toggle.addEventListener("click", function () {
         setListingExpanded(item, content.classList.contains("closed"));
+        refreshFolds();
       });
     });
 
@@ -267,7 +265,7 @@
         if (empty) empty.hidden = visible > 0;
       });
 
-      refreshGridFolds();
+      refreshFolds();
     }
 
     buttons.forEach(function (b) {
@@ -288,82 +286,97 @@
     apply(initial);
   }
 
-  /* ---------------------------------------------------------- grid fold */
-  // Collapses a grid (the completed-projects tiles) to its first N rows plus
-  // a fading row underneath; a chevron button toggles the rest. Rows are
-  // measured from the tiles' offsets because the grid is auto-fill, so the
-  // measurement is redone on resize, on image load and after the area filter
-  // has hidden or shown tiles (refreshGridFolds, called from the filter).
-  var gridFolds = [];
+  /* --------------------------------------------------------------- folds */
+  // A fold ([data-fold]) shows the first N rows of its items, lets the next
+  // row fade out under a gradient and hides the rest until the [data-fold-toggle]
+  // whose aria-controls names the fold is pressed. Used for the completed
+  // projects grid (items in a [data-fold-items] list inside the fold) and for
+  // each year of the publication / thesis listings (items are the fold's own
+  // children). Rows are measured from the items' offsets, so the fold is
+  // re-measured on resize, on image load, after a filter run and whenever an
+  // entry inside it expands (refreshFolds). Items that are hidden by a filter
+  // (hidden attribute or display:none) are ignored; items below the fade row
+  // are made inert while folded.
+  var folds = [];
 
-  function refreshGridFolds() {
-    gridFolds.forEach(function (fold) { fold.measure(); });
+  function refreshFolds() {
+    folds.forEach(function (fold) { fold.measure(); });
   }
 
-  function initGridFolds() {
-    var wraps = Array.prototype.slice.call(document.querySelectorAll("[data-grid-fold]"));
+  // Unfolds the fold an element sits in (deep links into a hidden entry).
+  function unfoldAround(el) {
+    var wrap = el.closest ? el.closest("[data-fold]") : null;
+    if (!wrap) return;
+    folds.forEach(function (fold) {
+      if (fold.wrap === wrap) fold.expand();
+    });
+  }
+
+  function initFolds() {
+    var wraps = Array.prototype.slice.call(document.querySelectorAll("[data-fold]"));
     wraps.forEach(function (wrap) {
-      var toggle = wrap.parentNode.querySelector("[data-grid-fold-toggle]");
-      var grid = wrap.querySelector(".project-grid");
-      if (!toggle || !grid) return;
+      var toggle = wrap.id
+        ? document.querySelector('[data-fold-toggle][aria-controls="' + wrap.id + '"]')
+        : null;
+      var list = wrap.querySelector("[data-fold-items]") || wrap;
+      if (!toggle) return;
 
       var keepRows = parseInt(wrap.getAttribute("data-fold-rows"), 10) || 2;
+      var labelEl = toggle.querySelector("[data-fold-label]");
       var expanded = false;
       var foldable = false;
+      var hiddenCount = 0;
       var animTimer = null;
 
-      function visibleTiles() {
-        return Array.prototype.slice.call(grid.children).filter(function (el) {
-          return !el.hidden;
+      function visibleItems() {
+        return Array.prototype.slice.call(list.children).filter(function (el) {
+          return !el.hidden && el.style.display !== "none";
         });
       }
 
-      // Groups the visible tiles into rows by their top offset (relative to
-      // the wrapper, which is the offset parent).
+      // Groups the visible items into rows by their top offset (relative to
+      // the fold, which is the offset parent).
       function measureRows() {
         var rows = [];
-        visibleTiles().forEach(function (tile) {
-          var top = tile.offsetTop;
+        visibleItems().forEach(function (item) {
+          var top = item.offsetTop;
           var row = rows.length ? rows[rows.length - 1] : null;
           if (!row || Math.abs(row.top - top) > 2) {
-            row = { top: top, bottom: top + tile.offsetHeight, tiles: [] };
+            row = { top: top, bottom: top + item.offsetHeight, items: [] };
             rows.push(row);
           } else {
-            row.bottom = Math.max(row.bottom, top + tile.offsetHeight);
+            row.bottom = Math.max(row.bottom, top + item.offsetHeight);
           }
-          row.tiles.push(tile);
+          row.items.push(item);
         });
         return rows;
       }
 
-      // Tiles below the fade row are unreachable while folded, so keep them
+      // Items below the fade row are unreachable while folded, so keep them
       // out of the tab order and the accessibility tree.
       function setReachable(rows) {
-        Array.prototype.slice.call(grid.children).forEach(function (tile) {
-          if (!tile.hidden) return;
-          var link = tile.querySelector("a");
-          if (link) link.removeAttribute("tabindex");
-          tile.removeAttribute("aria-hidden");
+        Array.prototype.slice.call(list.children).forEach(function (item) {
+          item.removeAttribute("inert");
+          item.removeAttribute("aria-hidden");
         });
+        if (expanded || !foldable) return;
         rows.forEach(function (row, i) {
-          var reachable = expanded || !foldable || i <= keepRows;
-          row.tiles.forEach(function (tile) {
-            var link = tile.querySelector("a");
-            if (link) {
-              if (reachable) link.removeAttribute("tabindex");
-              else link.setAttribute("tabindex", "-1");
-            }
-            if (reachable) tile.removeAttribute("aria-hidden");
-            else tile.setAttribute("aria-hidden", "true");
+          if (i <= keepRows) return;
+          row.items.forEach(function (item) {
+            item.setAttribute("inert", "");
+            item.setAttribute("aria-hidden", "true");
           });
         });
       }
 
       function render() {
-        var label = toggle.getAttribute(expanded ? "data-label-less" : "data-label-more");
+        var label = toggle.getAttribute(expanded ? "data-label-less" : "data-label-more") || "";
+        label = label.replace("{n}", hiddenCount);
         toggle.hidden = !foldable;
         toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
-        if (label) {
+        if (labelEl) {
+          labelEl.textContent = label;
+        } else if (label) {
           toggle.setAttribute("aria-label", label);
           toggle.setAttribute("title", label);
         }
@@ -374,9 +387,11 @@
         var rows = measureRows();
         // Fold only when there is more than the kept rows plus the fade row.
         foldable = rows.length > keepRows + 1;
+        hiddenCount = 0;
         if (foldable) {
           var fadeRow = rows[keepRows];
           var lastKept = rows[keepRows - 1];
+          rows.slice(keepRows).forEach(function (row) { hiddenCount += row.items.length; });
           wrap.style.setProperty("--fold-h", fadeRow.bottom + "px");
           wrap.style.setProperty("--fold-fade", (fadeRow.bottom - lastKept.bottom) + "px");
         } else {
@@ -384,22 +399,34 @@
           wrap.style.removeProperty("--fold-h");
           wrap.style.removeProperty("--fold-fade");
         }
-        wrap.style.setProperty("--fold-full", grid.offsetHeight + "px");
+        wrap.style.setProperty("--fold-full", list.offsetHeight + "px");
         setReachable(rows);
         render();
       }
 
-      toggle.addEventListener("click", function () {
-        expanded = !expanded;
+      function animate() {
         wrap.classList.add("is-animating");
         clearTimeout(animTimer);
         animTimer = setTimeout(function () {
           wrap.classList.remove("is-animating");
         }, 500);
+      }
+
+      function expand() {
+        if (expanded) return;
+        expanded = true;
+        animate();
         measure();
-        // Collapsing can pull the grid far up the page; keep it in view.
+      }
+
+      toggle.addEventListener("click", function () {
+        expanded = !expanded;
+        animate();
+        measure();
+        // Collapsing can pull the list far up the page; keep its heading in view.
         if (!expanded && wrap.getBoundingClientRect().top < 0) {
-          wrap.parentNode.scrollIntoView({ block: "start" });
+          var anchor = wrap.previousElementSibling || wrap;
+          anchor.scrollIntoView({ block: "start" });
         }
       });
 
@@ -408,46 +435,13 @@
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(measure, 120);
       });
-      Array.prototype.slice.call(grid.querySelectorAll("img")).forEach(function (img) {
+      Array.prototype.slice.call(list.querySelectorAll("img")).forEach(function (img) {
         if (!img.complete) img.addEventListener("load", measure, { once: true });
       });
 
-      gridFolds.push({ measure: measure });
+      folds.push({ wrap: wrap, measure: measure, expand: expand });
       measure();
     });
-  }
-
-  /* ---------------------------------------------------------- year groups */
-  // The year headings of the publication / thesis listings toggle the
-  // `.year-group` that follows them. resetYearGroups() (called by the
-  // listing filter after every run) opens the newest visible year and
-  // collapses the rest; a heading the visitor toggled keeps that state until
-  // the next filter change.
-  function setYearExpanded(heading, expanded) {
-    var toggle = heading.querySelector(".year-toggle");
-    heading.classList.toggle("is-collapsed", !expanded);
-    if (toggle) toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
-  }
-
-  function resetYearGroups() {
-    var first = true;
-    Array.prototype.slice.call(document.querySelectorAll(".year-heading")).forEach(function (heading) {
-      if (heading.style.display === "none") return;
-      setYearExpanded(heading, first);
-      first = false;
-    });
-  }
-
-  function initYearGroups() {
-    var headings = Array.prototype.slice.call(document.querySelectorAll(".year-heading"));
-    headings.forEach(function (heading) {
-      var toggle = heading.querySelector(".year-toggle");
-      if (!toggle) return;
-      toggle.addEventListener("click", function () {
-        setYearExpanded(heading, heading.classList.contains("is-collapsed"));
-      });
-    });
-    resetYearGroups();
   }
 
   /* ------------------------------------------------------------ listbox */
@@ -591,12 +585,10 @@
           ? Array.prototype.slice.call(group.querySelectorAll(".listing-item"))
           : [];
         var count = inGroup.filter(function (item) { return item.style.display !== "none"; }).length;
-        var badge = heading.querySelector("[data-year-count]");
-        if (badge) badge.textContent = count;
         heading.style.display = count ? "" : "none";
         if (group) group.style.display = count ? "" : "none";
       });
-      resetYearGroups();
+      refreshFolds();
 
       var tpl = root.getAttribute("data-results-template") || "";
       if (resultsEl) {
@@ -642,8 +634,8 @@
       boxes[key].set(m ? m[1] : "all", false);
     });
     apply();
-    // apply() collapsed every year but the newest; an entry the page was
-    // opened on (search result, shared link) must stay reachable.
+    // The folds were just re-measured; an entry the page was opened on
+    // (search result, shared link) must stay unfolded.
     handleHashTarget();
   }
 
@@ -791,10 +783,9 @@
   /* --------------------------------------------------------------- boot */
   function boot() {
     initHeader();
+    initFolds();
     initCollapsibles();
-    initYearGroups();
     initGalleries();
-    initGridFolds();
     initProjectFilter();
     initListingFilter();
     initHeroWaves();

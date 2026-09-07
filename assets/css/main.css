@@ -312,6 +312,109 @@ main {
 }
 
 /* --------------------------------------------------------------------------
+   Folds
+   A [data-fold] container shows its first rows, lets the next row fade out
+   top-down under a gradient and hides the rest behind a toggle button
+   (initFolds in main.js). Used for the completed-projects grid and for each
+   year of the publication / thesis listings. Row geometry depends on the
+   viewport, so the script measures it and writes --fold-h (clipped height),
+   --fold-full (expanded height) and --fold-fade (gradient height). Without
+   JS nothing is folded and the buttons stay hidden.
+   -------------------------------------------------------------------------- */
+.fold {
+  position: relative;
+}
+
+.fold.is-folded,
+.fold.is-animating {
+  overflow: hidden;
+  max-height: var(--fold-full, none);
+}
+
+.fold.is-folded {
+  max-height: var(--fold-h, none);
+}
+
+/* animate only on a click; re-measuring (filters, resize) must snap */
+.fold.is-animating {
+  transition: max-height 0.45s var(--ease);
+}
+
+.fold::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--fold-fade, 0px);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, var(--color-bg) 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease);
+}
+
+.fold.is-folded::after {
+  opacity: 1;
+}
+
+/* round chevron button, centred under the fold */
+.fold-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 1rem auto 0;
+  padding: 0;
+  background: var(--color-white);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease),
+    color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.fold-toggle[hidden] {
+  display: none;
+}
+
+/* pill variant with a text label (listings) */
+.fold-toggle--label {
+  width: max-content;
+  padding: 0 1.1rem 0 0.9rem;
+}
+
+.fold-toggle:hover,
+.fold-toggle:focus-visible {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+  box-shadow: var(--shadow-md);
+}
+
+.fold-toggle i {
+  transition: transform 0.3s var(--ease);
+}
+
+.fold-toggle[aria-expanded="true"] i {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fold.is-animating,
+  .fold::after,
+  .fold-toggle i {
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
    Buttons, badges, links
    -------------------------------------------------------------------------- */
 .btn {
@@ -914,110 +1017,10 @@ article {
   margin-top: 0;
 }
 
-/* Year headings toggle the .year-group that follows them (initYearGroups in
-   main.js). The button inherits the heading's type; the count badge is
-   filled by the listing filter and the chevron points up while open. */
-.year-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  margin: 0;
-  padding: 0.15rem 0;
-  background: none;
-  border: none;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.year-toggle:hover {
-  color: var(--color-primary);
-}
-
-.year-toggle:focus-visible {
-  outline: none;
-  color: var(--color-primary);
-  box-shadow: var(--ring);
-  border-radius: var(--radius-sm);
-}
-
-.year-toggle-count {
-  padding: 0.1rem 0.55rem;
-  border-radius: var(--radius-pill);
-  background: var(--color-bg-muted);
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 0;
-  color: var(--color-text-light);
-}
-
-.year-toggle-count:empty {
-  display: none;
-}
-
-.year-toggle-icon {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  background: var(--color-bg-light);
-  border: 1px solid var(--color-line);
-  border-radius: 50%;
-  font-size: 0.65rem;
-  color: var(--color-primary);
-  transform: rotate(180deg);
-}
-
-.year-toggle:hover .year-toggle-icon,
-.year-toggle:focus-visible .year-toggle-icon {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-white);
-}
-
-.year-heading.is-collapsed .year-toggle-icon {
-  transform: none;
-}
-
-.year-heading.is-collapsed + .year-group {
-  display: none;
-}
-
-.year-heading.is-collapsed {
-  margin-bottom: 0;
-}
-
-/* consecutive collapsed years sit close together */
-.year-heading.is-collapsed + .year-group + .year-heading {
+.year-group + .fold-toggle {
   margin-top: 1.25rem;
 }
 
-html:not(.js) .year-toggle {
-  cursor: default;
-}
-
-html:not(.js) .year-toggle:hover {
-  color: inherit;
-}
-
-html:not(.js) .year-toggle-icon,
-html:not(.js) .year-toggle-count {
-  display: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .year-toggle {
-    transition: color 0.15s var(--ease);
-  }
-
-  .year-toggle-icon {
-    transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease),
-      color 0.15s var(--ease), transform 0.25s var(--ease);
-  }
-}
 
 .publication-entry,
 .thesis-entry {

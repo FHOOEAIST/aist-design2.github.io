@@ -69,15 +69,15 @@ first phase's end date. {% endcomment %}
         <p>{{ done_projects.size }} completed projects (since 2015)</p>
       </div>
     </div>
-    <div class="grid-fold" data-grid-fold data-fold-rows="2">
-    <ul class="project-grid complete" id="completed-projects">
+    <div class="fold" id="completed-projects" data-fold data-fold-rows="2">
+    <ul class="project-grid complete" data-fold-items>
     {% for project in done_projects %}
       {% assign is_active = false %}
       {% include project-card.html %}
     {% endfor %}
     </ul>
     </div>
-    <button type="button" class="grid-fold-toggle" data-grid-fold-toggle aria-expanded="false" aria-controls="completed-projects" aria-label="Show all completed projects" title="Show all completed projects" data-label-more="Show all completed projects" data-label-less="Show fewer completed projects" hidden><i class="fas fa-chevron-down" aria-hidden="true"></i></button>
+    <button type="button" class="fold-toggle" data-fold-toggle aria-expanded="false" aria-controls="completed-projects" aria-label="Show all completed projects" title="Show all completed projects" data-label-more="Show all completed projects" data-label-less="Show fewer completed projects" hidden><i class="fas fa-chevron-down" aria-hidden="true"></i></button>
     <p class="project-group-empty" data-empty hidden>No completed projects in this area.</p>
   </section>
 </div>

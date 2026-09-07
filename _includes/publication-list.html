@@ -6,7 +6,8 @@ Title and reference (authors, venue) are always visible. Only the details —
 DOI, external link, abstract — collapse, and an entry without any of them
 renders as a plain card without a toggle.
 
-Years are collapsible groups (see _includes/year-heading.html).
+Each year is a fold showing two entries plus a fading third (see
+_includes/year-heading.html).
 
 Each entry exposes its `categories:` list as a space-separated `data-categories`
 attribute (plus data-year) for the filter in _includes/listing-filter.html, and repeats them
@@ -29,8 +30,7 @@ as badges that double as a shortcut into that category.
     {% for pub in pubs %}
     {% assign pub_year = pub.date | date: "%Y" %}
     {% if pub_year != year %}
-    {% if year == "" %}{% assign first_year = true %}{% else %}{% assign first_year = false %}{% endif %}
-    {% include year-heading.html year=pub_year first=first_year %}
+    {% include year-heading.html year=pub_year prev=year lang=include.lang %}
     {% assign year = pub_year %}
     {% endif %}
     {% assign anchor = pub.permalink | slugify %}
@@ -110,5 +110,5 @@ as badges that double as a shortcut into that category.
         {% endif %}
     </div>
     {% endfor %}
-    {% if pubs.size > 0 %}</div>{% endif %}
+    {% include year-heading.html close=true prev=year lang=include.lang %}
 </div>
