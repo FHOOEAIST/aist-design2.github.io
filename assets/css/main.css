@@ -914,6 +914,111 @@ article {
   margin-top: 0;
 }
 
+/* Year headings toggle the .year-group that follows them (initYearGroups in
+   main.js). The button inherits the heading's type; the count badge is
+   filled by the listing filter and the chevron points up while open. */
+.year-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0.15rem 0;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.year-toggle:hover {
+  color: var(--color-primary);
+}
+
+.year-toggle:focus-visible {
+  outline: none;
+  color: var(--color-primary);
+  box-shadow: var(--ring);
+  border-radius: var(--radius-sm);
+}
+
+.year-toggle-count {
+  padding: 0.1rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-muted);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0;
+  color: var(--color-text-light);
+}
+
+.year-toggle-count:empty {
+  display: none;
+}
+
+.year-toggle-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: var(--color-bg-light);
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  font-size: 0.65rem;
+  color: var(--color-primary);
+  transform: rotate(180deg);
+}
+
+.year-toggle:hover .year-toggle-icon,
+.year-toggle:focus-visible .year-toggle-icon {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.year-heading.is-collapsed .year-toggle-icon {
+  transform: none;
+}
+
+.year-heading.is-collapsed + .year-group {
+  display: none;
+}
+
+.year-heading.is-collapsed {
+  margin-bottom: 0;
+}
+
+/* consecutive collapsed years sit close together */
+.year-heading.is-collapsed + .year-group + .year-heading {
+  margin-top: 1.25rem;
+}
+
+html:not(.js) .year-toggle {
+  cursor: default;
+}
+
+html:not(.js) .year-toggle:hover {
+  color: inherit;
+}
+
+html:not(.js) .year-toggle-icon,
+html:not(.js) .year-toggle-count {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .year-toggle {
+    transition: color 0.15s var(--ease);
+  }
+
+  .year-toggle-icon {
+    transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease),
+      color 0.15s var(--ease), transform 0.25s var(--ease);
+  }
+}
+
 .publication-entry,
 .thesis-entry {
   margin-bottom: 0.75rem;

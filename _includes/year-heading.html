@@ -1,0 +1,22 @@
+{% comment %}
+Year heading of the publication / thesis listings, as a collapsible group.
+Expects:
+  include.year  — the year to print
+  include.first — true for the first heading (nothing to close before it)
+
+Emits the closing tag of the previous year's `.year-group`, the heading with
+its toggle button, and the opening tag of this year's group; the caller closes
+the last group after its loop. Entries are `.listing-item` children of the
+group. main.js (initYearGroups) wires the button and, after every filter run,
+opens the newest visible year and collapses the rest; without JS every year
+stays open.
+{% endcomment %}
+{%- unless include.first -%}</div>{%- endunless -%}
+<h2 class="mt-3 year-heading" data-year="{{ include.year }}">
+    <button type="button" class="year-toggle" aria-expanded="true" aria-controls="year-{{ include.year }}">
+        <span class="year-toggle-text">{{ include.year }}</span>
+        <span class="year-toggle-count" data-year-count aria-hidden="true"></span>
+        <span class="year-toggle-icon" aria-hidden="true"><i class="fa-solid fa-chevron-down"></i></span>
+    </button>
+</h2>
+<div class="year-group" id="year-{{ include.year }}">

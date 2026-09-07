@@ -1,4 +1,4 @@
-/* AIST site behaviour: header, collapsible listings, galleries, folded grids, project filter. */
+/* AIST site behaviour: header, collapsible listings, year groups, galleries, folded grids, project filter. */
 (function () {
   "use strict";
 
@@ -58,6 +58,10 @@
     var item = target.closest(".listing-item") || target;
     if (item.classList.contains("collapsible")) {
       setListingExpanded(item, true);
+    }
+    var group = item.closest(".year-group");
+    if (group && group.previousElementSibling && group.previousElementSibling.classList.contains("year-heading")) {
+      setYearExpanded(group.previousElementSibling, true);
     }
   }
 
@@ -413,6 +417,39 @@
     });
   }
 
+  /* ---------------------------------------------------------- year groups */
+  // The year headings of the publication / thesis listings toggle the
+  // `.year-group` that follows them. resetYearGroups() (called by the
+  // listing filter after every run) opens the newest visible year and
+  // collapses the rest; a heading the visitor toggled keeps that state until
+  // the next filter change.
+  function setYearExpanded(heading, expanded) {
+    var toggle = heading.querySelector(".year-toggle");
+    heading.classList.toggle("is-collapsed", !expanded);
+    if (toggle) toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+  }
+
+  function resetYearGroups() {
+    var first = true;
+    Array.prototype.slice.call(document.querySelectorAll(".year-heading")).forEach(function (heading) {
+      if (heading.style.display === "none") return;
+      setYearExpanded(heading, first);
+      first = false;
+    });
+  }
+
+  function initYearGroups() {
+    var headings = Array.prototype.slice.call(document.querySelectorAll(".year-heading"));
+    headings.forEach(function (heading) {
+      var toggle = heading.querySelector(".year-toggle");
+      if (!toggle) return;
+      toggle.addEventListener("click", function () {
+        setYearExpanded(heading, heading.classList.contains("is-collapsed"));
+      });
+    });
+    resetYearGroups();
+  }
+
   /* ------------------------------------------------------------ listbox */
   // Custom ARIA listbox (trigger button + option list) used by the listing
   // filters. onChange receives the selected option's data-value.
@@ -549,14 +586,17 @@
       });
 
       yearHeadings.forEach(function (heading) {
-        var next = heading.nextElementSibling;
-        var any = false;
-        while (next && !next.classList.contains("year-heading")) {
-          if (next.classList.contains("listing-item") && next.style.display !== "none") any = true;
-          next = next.nextElementSibling;
-        }
-        heading.style.display = any ? "" : "none";
+        var group = heading.nextElementSibling;
+        var inGroup = group && group.classList.contains("year-group")
+          ? Array.prototype.slice.call(group.querySelectorAll(".listing-item"))
+          : [];
+        var count = inGroup.filter(function (item) { return item.style.display !== "none"; }).length;
+        var badge = heading.querySelector("[data-year-count]");
+        if (badge) badge.textContent = count;
+        heading.style.display = count ? "" : "none";
+        if (group) group.style.display = count ? "" : "none";
       });
+      resetYearGroups();
 
       var tpl = root.getAttribute("data-results-template") || "";
       if (resultsEl) {
@@ -602,6 +642,9 @@
       boxes[key].set(m ? m[1] : "all", false);
     });
     apply();
+    // apply() collapsed every year but the newest; an entry the page was
+    // opened on (search result, shared link) must stay reachable.
+    handleHashTarget();
   }
 
   /* ----------------------------------------------------------- hero waves */
@@ -749,6 +792,7 @@
   function boot() {
     initHeader();
     initCollapsibles();
+    initYearGroups();
     initGalleries();
     initGridFolds();
     initProjectFilter();
