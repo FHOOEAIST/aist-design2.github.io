@@ -371,8 +371,11 @@
 
       function render() {
         var label = toggle.getAttribute(expanded ? "data-label-less" : "data-label-more") || "";
-        label = label.replace("{n}", hiddenCount);
+        label = foldable ? label.replace("{n}", hiddenCount) : "";
+        // hidden attribute plus inline display, so the button stays gone even
+        // under a stale stylesheet that lets .fold-toggle's display win
         toggle.hidden = !foldable;
+        toggle.style.display = foldable ? "" : "none";
         toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
         if (labelEl) {
           labelEl.textContent = label;
